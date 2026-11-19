@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CiteCheck: AI-Powered Citation and Claim Verification</title>
+<style>
+  :root{
+    --ink:#0b2e33; --teal:#0f766e; --teal-dark:#0a5c56; --mist:#eef5f3; --line:#d5e3e0;
+    --paper:#fbfdfc; --muted:#54706f; --amber:#f59e0b;
+    --supported:#15803d; --partially_supported:#b45309; --unsupported:#b91c1c;
+    --unverifiable:#475569;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"Segoe UI",system-ui,Arial,sans-serif;line-height:1.55;font-size:16px}
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;margin:0;line-height:1.2}
+  :focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+  header.hero{background:var(--ink);color:#fff;padding:36px 0 44px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:Georgia,serif;font-size:22px;font-weight:bold}
+  .brand span.logo{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--teal);font-size:19px}
+  .hero h1{font-size:clamp(28px,5vw,44px);margin:26px 0 12px;max-width:760px}
+  .hero p{margin:0;max-width:640px;color:#cfe3e0;font-size:18px}
+  .team{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px;color:#cfe3e0;font-size:15px}
+  .team b{background:rgba(255,255,255,.12);padding:4px 12px;border-radius:99px;color:#fff;font-weight:600}
+
+  section{padding:36px 0 8px}
+  section > .wrap > h2{font-size:26px;margin-bottom:6px}
+  .lead{color:var(--muted);margin:0 0 18px;max-width:680px}
+
+  .grid2{display:grid;grid-template-columns:1.05fr 1fr;gap:22px;align-items:start}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px}
+  .drop{border:2px dashed #9cc3bd;border-radius:12px;background:var(--mist);padding:24px;text-align:center}
+  .drop .big{font-size:34px}
+  .drop p{margin:6px 0 14px;color:var(--muted)}
+  .fname{margin-top:10px;font-weight:600;word-break:break-all}
+  button{font:inherit;cursor:pointer;border:0;border-radius:9px;padding:11px 20px;font-weight:600}
+  .btn-main{background:var(--teal);color:#fff}
+  .btn-main:hover:not(:disabled){background:var(--teal-dark)}
+  .btn-main:disabled{background:#9fb3b1;cursor:not-allowed}
+  .btn-alt{background:#fff;color:var(--teal);border:2px solid var(--teal)}
+  .btn-alt:hover:not(:disabled){background:var(--mist)}
+  .btn-alt:disabled{opacity:.5;cursor:not-allowed}
+  .btn-small{padding:7px 14px;font-size:14px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .optional{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+  input[type=file]{font:inherit;max-width:100%}
+
+  .steps{list-style:none;margin:0;padding:0}
+  .steps li{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+  .steps li:last-child{border-bottom:0}
+  .dot{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--mist);color:var(--muted);font-weight:700;border:2px solid var(--line)}
+  .steps li.running .dot{background:var(--amber);color:var(--ink);border-color:var(--amber)}
+  .steps li.done .dot{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .steps h3{font-size:17px;font-family:"Segoe UI",system-ui,sans-serif}
+  .steps p{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+  .steps .state{font-size:13px;margin-top:3px;font-weight:600;color:var(--muted)}
+  .steps li.running .state{color:#b45309}
+  .steps li.done .state{color:var(--teal)}
+  .bar{height:8px;background:var(--mist);border-radius:99px;overflow:hidden;margin-top:16px}
+  .bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .4s}
+  #pmsg{margin-top:10px;font-size:14px;color:var(--muted);min-height:20px}
+
+  .notice{background:#fff7e0;border:1px solid #f3d27a;border-radius:10px;padding:11px 14px;font-size:14.5px;margin-bottom:16px}
+  .errbox{background:#fdecec;border:1px solid #e9a3a3;color:#8a1c1c;border-radius:10px;padding:11px 14px;font-size:14.5px;margin-top:16px;font-weight:600}
+
+  [hidden]{display:none!important}
+  .summary{display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center}
+  @media(max-width:620px){.summary{grid-template-columns:1fr}}
+  .score{font-family:Georgia,serif;font-size:72px;line-height:1;color:var(--teal)}
+  .score small{font-size:22px;color:var(--muted)}
+  .meta{color:var(--muted);font-size:14.5px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:5px 13px;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .claim{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:16px}
+  .claim-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+  .pill{color:#fff;border-radius:99px;padding:3px 14px;font-weight:700;font-size:14px}
+  .claim blockquote{margin:10px 0 6px;font-family:Georgia,serif;font-size:19px;line-height:1.4}
+  .cite{color:var(--muted);font-size:14.5px}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:14px}
+  .fact{background:var(--mist);border-radius:10px;padding:12px 14px;font-size:14.5px}
+  .fact h4{margin:0 0 5px;font-size:14px;color:var(--teal-dark)}
+  .conf{display:flex;align-items:center;gap:10px}
+  .conf .track{flex:1;height:9px;background:#fff;border-radius:99px;overflow:hidden}
+  .conf .track i{display:block;height:100%}
+  .evidence{margin-top:12px;border-left:4px solid var(--teal);background:#f4faf9;padding:10px 14px;border-radius:0 10px 10px 0;font-size:15px}
+  .evidence.refutes{border-left-color:var(--unsupported);background:#fdf3f3}
+  .evidence .src{display:block;color:var(--muted);font-size:13.5px;margin-top:4px}
+  .flags{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+  .flag{background:#fdecec;color:#8a1c1c;border-radius:6px;padding:2px 9px;font-size:13px;font-weight:600}
+  .review{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}
+  .review input[type=text]{flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px}
+  .review .done{color:var(--teal);font-weight:700}
+  .hist{margin-top:8px;font-size:13px;color:var(--muted)}
+  details{margin-top:10px}
+  summary{cursor:pointer;font-weight:600;color:var(--teal-dark)}
+  table{border-collapse:collapse;width:100%;font-size:14.5px}
+  th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+  th{background:var(--mist)}
+  pre{background:var(--ink);color:#d7efeb;padding:14px;border-radius:10px;overflow:auto;font-size:13px;max-height:320px}
+
+  .cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px}
+  .card h3{font-size:18px;margin-bottom:6px}
+  .card ul{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:14.5px}
+  footer{margin-top:44px;background:var(--ink);color:#cfe3e0;padding:22px 0;font-size:14.5px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brand"><span class="logo">🔎</span> CiteCheck</div>
+    <h1>Find out whether a paper's citations really support its claims</h1>
+    <p>Upload a research paper. CiteCheck finds each claim, reads the cited source, and gives a verdict with evidence, confidence and a full audit trail.</p>
+    <div class="team">Team: <b>Harshitha T</b> <b>Harshitha D</b> <b>Harshitha M</b></div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Check a paper</h2>
+    <p class="lead">Choose a PDF and press Verify. The five stages on the right follow your real backend.</p>
+    <div class="grid2">
+      <div class="panel">
+        <div class="drop">
+          <div class="big">📄</div>
+          <p>Choose the research paper (PDF) you want to check.</p>
+          <input type="file" id="file" accept=".pdf" aria-label="Choose research paper PDF">
+          <div class="fname" id="fname">No file selected</div>
+        </div>
+        <div class="optional">
+          <b>Optional:</b> add the cited papers as PDFs for stronger evidence. Name each file after its reference: <b>R1.pdf, R2.pdf</b>.<br>
+          <input type="file" id="srcs" accept=".pdf" multiple aria-label="Add source PDFs">
+          <div id="srcnames">None added. Claims will show "Cannot verify" without source PDFs.</div>
+        </div>
+        <div class="actions">
+          <button class="btn-main" id="go" disabled>Verify citations</button>
+          <button class="btn-alt" id="sample">Use sample paper</button>
+        </div>
+        <div class="errbox" id="error" hidden></div>
+      </div>
+
+      <div class="panel">
+        <ol class="steps" id="steps">
+          <li data-i="0"><div class="dot">1</div><div><h3>Upload</h3><p>The PDF is read page by page and the reference list is separated from the body text.</p><div class="state">Waiting</div></div></li>
+          <li data-i="1"><div class="dot">2</div><div><h3>Extract</h3><p>AI finds claims, citation markers like [1] and the list of references.</p><div class="state">Waiting</div></div></li>
+          <li data-i="2"><div class="dot">3</div><div><h3>Retrieve</h3><p>Each citation is matched to its reference, and the best source passages are found.</p><div class="state">Waiting</div></div></li>
+          <li data-i="3"><div class="dot">4</div><div><h3>Compare</h3><p>AI checks numbers, scope and limits of the claim against the source evidence.</p><div class="state">Waiting</div></div></li>
+          <li data-i="4"><div class="dot">5</div><div><h3>Report</h3><p>A reliability score, verdicts, evidence and flags are ready to download.</p><div class="state">Waiting</div></div></li>
+        </ol>
+        <div class="bar" aria-hidden="true"><i id="pbar"></i></div>
+        <div id="pmsg"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="results" hidden>
+  <div class="wrap">
+    <h2>Verification results</h2>
+    <div class="notice" id="notice"></div>
+    <div class="panel summary">
+      <div>
+        <div class="score" id="score">0<small>/100</small></div>
+        <div class="meta">Reliability score</div>
+      </div>
+      <div>
+        <div class="meta" id="metaline"></div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+    <div id="claims"></div>
+  </div>
+</section>
+
+<section id="deliver" hidden>
+  <div class="wrap">
+    <h2>What you receive</h2>
+    <p class="lead">Every check ends with a report you can keep, share or hand to a reviewer.</p>
+    <div class="cards3">
+      <div class="card"><h3>Verification report</h3>
+        <ul><li>Reliability score out of 100</li><li>One verdict for every claim</li><li>Items that need human review</li></ul>
+        <div class="actions"><button class="btn-main btn-small" id="dlm">Download report (Markdown)</button></div></div>
+      <div class="card"><h3>Machine-readable data</h3>
+        <ul><li>All claims, evidence and verdicts</li><li>Source trace for every quote</li><li>Reviewer decisions and notes</li></ul>
+        <div class="actions"><button class="btn-alt btn-small" id="dlj">Download data (JSON)</button></div></div>
+      <div class="card"><h3>Audit trail</h3>
+        <ul><li>Who accepted or rejected each finding</li><li>Time of every review</li><li>Basis of each verdict (source text or none)</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="stored" hidden>
+  <div class="wrap">
+    <h2>What the system stores</h2>
+    <p class="lead">Nothing is a black box. Each part of the check is saved as a record you can inspect.</p>
+    <div class="panel">
+      <table>
+        <thead><tr><th>Record</th><th>What it holds</th><th>Count for this paper</th></tr></thead>
+        <tbody id="storetable"></tbody>
+      </table>
+      <details><summary>View the stored data (JSON)</summary><pre id="json"></pre></details>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">CiteCheck: AI-Powered Citation and Claim Verification Platform. Results are automated and open to human review.</div></footer>
+
+<script>
+/* ========== SETTINGS ========== */
+var API = "http://127.0.0.1:8000";   // your backend address
+
+/* ========== LABELS ========== */
+var LABEL = {supported:"Supported", partially_supported:"Partly supported", unsupported:"Not supported", unverifiable:"Cannot verify"};
+var FLAGTXT = {
+  no_evidence_quote:"no evidence quote",
+  quote_not_found:"quote not found in source",
+  low_confidence:"low confidence",
+  needs_human_review:"needs human review",
+  possible_miscitation:"possible miscitation"
+};
+var WEIGHT = {supported:1, partially_supported:0.5, unsupported:0};
+var BACKEND_STATUS = {supported:"supported", partially_supported:"partially_supported", not_supported:"unsupported", cannot_verify:"unverifiable"};
+
+var S = {data:null, filter:"all", reviews:[], file:null, busy:false, demo:false};
+try { S.reviews = JSON.parse(localStorage.getItem("cc-reviews") || "[]"); } catch(e) {}
+function saveReviews(){ try { localStorage.setItem("cc-reviews", JSON.stringify(S.reviews)); } catch(e) {} }
+
+var $ = function(i){ return document.getElementById(i); };
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+/* ========== SAMPLE (already in the website's own format) ========== */
+var SAMPLE = {
+  file:"sample_paper.pdf", demo:true, score:50,
+  refs:[
+    {label:"R2 · Chen et al. Volatile signals in plants. 2026."},
+    {label:"R3 · Rao. Drone gas sensing in fields. 2024."}
+  ],
+  claims:[
+    {id:"C1", claim:"Plants release volatile organic compounds when pests attack them.", marker:"R2", refLabel:"R2 · Chen et al. Volatile signals in plants. 2026.",
+     status:"supported", confidence:1, basis:"source_text",
+     explanation:"The passage states this directly.",
+     evidence:[{relevance:"supports", text:"When pests attack a plant, the plant releases special gases called volatile organic compounds.", page:1, pid:"P2", context:"Plants talk to each other in surprising ways. When pests attack a plant, the plant releases special gases called volatile organic compounds. Nearby plants can sense these gases and prepare their own defenses."}],
+     flags:[]},
+    {id:"C2", claim:"Gas sensors on drones can detect these compounds across 500 hectares in one hour.", marker:"R3", refLabel:"R3 · Rao. Drone gas sensing in fields. 2024.",
+     status:"unsupported", confidence:0.85, basis:"source_text",
+     explanation:"The source says 50 hectares, not 500.",
+     evidence:[{relevance:"refutes", text:"In trials they covered 50 hectares in one hour.", page:2, pid:"P1", context:"We tested gas sensors on small drones. In trials they covered 50 hectares in one hour and found the compounds with good accuracy."}],
+     flags:["possible_miscitation","needs_human_review"]},
+    {id:"C3", claim:"Deep learning models reach 99% accuracy on every crop type.", marker:"R4", refLabel:"",
+     status:"unverifiable", confidence:0, basis:null,
+     explanation:"Source PDF not uploaded for R4.",
+     evidence:[], flags:["needs_human_review"]}
+  ]
+};
+
+/* ========== TURN THE BACKEND REPORT INTO THE WEBSITE FORMAT ========== */
+function refLabelOf(r){
+  if (!r) return "";
+  var t = r.text || r.raw || r.title || "";
+  return (r.id ? r.id + " · " : "") + t;
+}
+function normalize(R, fname){
+  var refsIn = Array.isArray(R.references) ? R.references : [];
+  var refs = refsIn.map(function(r){ return {label: refLabelOf(r)}; });
+  var claims = (R.claims || []).map(function(c, i){
+    var v = c.verdict || {};
+    var st = BACKEND_STATUS[v.status] || "unverifiable";
+    var pass = (c.passages_used || []).filter(function(p){ return p.id === v.passage_id; })[0];
+    var ref = refsIn.filter(function(r){ return r.id === c.source_id || (c.ids && c.ids[0] && r.id === c.ids[0]); })[0];
+    var ev = [];
+    if (v.evidence) {
+      ev.push({
+        relevance: st === "unsupported" ? "refutes" : "supports",
+        text: v.evidence,
+        page: pass ? pass.page : "?",
+        pid: v.passage_id || "",
+        context: pass ? pass.text : ""
+      });
+    }
+    return {
+      id: "C" + (i + 1),
+      claim: c.claim || c.text || "",
+      marker: (c.ids || []).join(", "),
+      refLabel: refLabelOf(ref),
+      status: st,
+      confidence: Math.max(0, Math.min(100, Number(v.confidence) || 0)) / 100,
+      basis: c.source_id ? "source_text" : null,
+      explanation: v.reason || "",
+      evidence: ev,
+      flags: v.flags || []
+    };
+  });
+  return {file: fname, demo: false, score: R.reliability_score == null ? null : R.reliability_score,
+          refs: refs, claims: claims, total: R.total_claims, checked: R.checked_claims};
+}
+
+/* ========== STEPS + PROGRESS ========== */
+function setStep(i, state){
+  var li = document.querySelector('#steps li[data-i="' + i + '"]');
+  li.className = state;
+  li.querySelector(".state").textContent = state === "running" ? "Working…" : state === "done" ? "Done" : "Waiting";
+  li.querySelector(".dot").textContent = state === "done" ? "✓" : String(i + 1);
+}
+function resetSteps(){ for (var k = 0; k < 5; k++) setStep(k, "idle"); $("pbar").style.width = "0%"; $("pmsg").textContent = ""; }
+function stepsFromProgress(pct){
+  var cur = pct < 15 ? 0 : pct < 30 ? 1 : pct <= 30 ? 2 : 3;
+  for (var k = 0; k < 5; k++) setStep(k, pct >= 100 ? "done" : k < cur ? "done" : k === cur ? "running" : "idle");
+  $("pbar").style.width = Math.max(2, pct) + "%";
+}
+
+function showError(m){
+  $("error").textContent = m;
+  $("error").hidden = false;
+}
+function fail(e){
+  S.busy = false;
+  $("go").disabled = !S.file;
+  $("sample").disabled = false;
+  resetSteps();
+  var m = String((e && e.message) || e);
+  if (e instanceof TypeError) m = "Cannot reach the server. In VS Code (citecheck-backend) run: uvicorn app.server:app --reload";
+  else if (/429|RESOURCE/.test(m)) m = "Gemini daily limit reached. Try again later. " + m;
+  showError(m);
+}
+
+/* ========== FILE PICKERS ========== */
+$("file").onchange = function(e){
+  S.file = e.target.files[0] || null;
+  $("fname").textContent = S.file ? S.file.name + " (" + Math.max(1, Math.round(S.file.size / 1024)) + " KB)" : "No file selected";
+  $("go").disabled = !S.file || S.busy;
+};
+$("srcs").onchange = function(e){
+  var f = Array.prototype.slice.call(e.target.files);
+  $("srcnames").textContent = f.length ? f.length + " source PDF(s): " + f.map(function(x){ return x.name; }).join(", ") : 'None added. Claims will show "Cannot verify" without source PDFs.';
+};
+$("go").onclick = function(){ runLive(); };
+$("sample").onclick = function(){ runSample(); };
+
+/* ========== REAL CHECK (your backend) ========== */
+async function runLive(){
+  if (S.busy || !S.file) return;
+  S.busy = true;
+  $("error").hidden = true;
+  $("go").disabled = true; $("sample").disabled = true;
+  $("results").hidden = true; $("deliver").hidden = true; $("stored").hidden = true;
+  resetSteps(); setStep(0, "running"); $("pbar").style.width = "2%"; $("pmsg").textContent = "Uploading...";
+  try {
+    var fd = new FormData();
+    fd.append("paper", S.file);
+    Array.prototype.slice.call($("srcs").files).forEach(function(f){ fd.append("sources", f); });
+    var r = await fetch(API + "/api/verify", {method:"POST", body:fd});
+    var j = await r.json();
+    if (!j.job_id) throw new Error(j.detail ? JSON.stringify(j.detail).slice(0, 200) : "The server did not return a job id.");
+    poll(j.job_id);
+  } catch(e) { fail(e); }
+}
+
+async function poll(id){
+  try {
+    var j = await (await fetch(API + "/api/jobs/" + id)).json();
+    if (j.error) throw new Error(j.message);
+    stepsFromProgress(j.progress || 0);
+    $("pmsg").textContent = (j.message || "") + " (" + (j.progress || 0) + "%)";
+    if (j.status === "error") throw new Error(j.message);
+    if (j.status === "done") {
+      if (!j.result || !j.result.claims) throw new Error("The server finished, but sent no report.");
+      S.reportId=id;
+      S.data = normalize(j.result, S.file ? S.file.name : "paper.pdf");
+      S.filter = "all"; S.busy = false; S.demo = false;
+      $("go").disabled = !S.file; $("sample").disabled = false;
+      render();
+      $("results").scrollIntoView({behavior:"smooth"});
+      return;
+    }
+    setTimeout(function(){ poll(id); }, 2000);
+  } catch(e) { fail(e); }
+}
+
+/* ========== SAMPLE (no backend, no Gemini) ========== */
+async function runSample(){
+  if (S.busy) return;
+  S.busy = true; $("error").hidden = true;
+  $("go").disabled = true; $("sample").disabled = true;
+  $("results").hidden = true; $("deliver").hidden = true; $("stored").hidden = true;
+  resetSteps();
+  for (var i = 0; i < 5; i++) {
+    setStep(i, "running"); $("pbar").style.width = (i * 20 + 10) + "%";
+    await sleep(700);
+    setStep(i, "done"); $("pbar").style.width = ((i + 1) * 20) + "%";
+  }
+  S.reported=null;
+  S.data = JSON.parse(JSON.stringify(SAMPLE));
+  S.filter = "all"; S.busy = false; S.demo = true;
+  $("go").disabled = !S.file; $("sample").disabled = false;
+  render();
+  $("results").scrollIntoView({behavior:"smooth"});
+}
+
+/* ========== DRAW THE REPORT ========== */
+function scoreOf(D){
+  if (D.score != null) return D.score;
+  var w = D.claims.filter(function(c){ return c.status in WEIGHT; }).map(function(c){ return WEIGHT[c.status]; });
+  return w.length ? Math.round(100 * w.reduce(function(a, b){ return a + b; }, 0) / w.length) : null;
+}
+function needsReview(c){
+  return c.status !== "supported" || c.confidence < 0.65 ||
+    c.flags.indexOf("needs_human_review") >= 0 || c.flags.indexOf("quote_not_found") >= 0 || c.flags.indexOf("possible_miscitation") >= 0;
+}
+function clabel(c){ return c >= 0.8 ? "high" : c >= 0.55 ? "medium" : "low"; }
+function reviewsOf(c){ return S.reviews.filter(function(r){ return r.claim === c.claim; }); }
+
+function render(){
+  var D = S.data, cnt = {};
+  D.claims.forEach(function(c){ cnt[c.status] = (cnt[c.status] || 0) + 1; });
+  var nrev = D.claims.filter(needsReview).length;
+  var sc = scoreOf(D);
+  $("notice").innerHTML = S.demo
+    ? "<b>Demo result.</b> This is sample output so you can see every feature. Choose a PDF and press Verify to run your real backend. Automated result, not a final academic judgment."
+    : "<b>Live result from your backend.</b> This is an automated result, not a final academic judgment. A person makes the final call.";
+  $("score").innerHTML = (sc == null ? "–" : sc) + "<small>/100</small>";
+  var checked = D.claims.filter(function(c){ return c.status !== "unverifiable"; }).length;
+  $("metaline").innerHTML = esc(D.file) + " · " + D.claims.length + " claims · " + checked + " checked · " + D.refs.length + " references<br><b>" + nrev + " items need human review</b>";
+  var h = '<button class="chip' + (S.filter === "all" ? " on" : "") + '" data-f="all">All ' + D.claims.length + '</button>';
+  h += '<button class="chip' + (S.filter === "review" ? " on" : "") + '" data-f="review">Needs review ' + nrev + '</button>';
+  Object.keys(LABEL).forEach(function(k){
+    if (cnt[k]) h += '<button class="chip' + (S.filter === k ? " on" : "") + '" data-f="' + k + '">' + LABEL[k] + " " + cnt[k] + "</button>";
+  });
+  $("chips").innerHTML = h;
+  claimsView();
+  renderStore();
+  $("results").hidden = false; $("deliver").hidden = false; $("stored").hidden = false;
+}
+
+function claimsView(){
+  var D = S.data, f = S.filter;
+  var L = D.claims.filter(function(c){ return f === "all" || (f === "review" ? needsReview(c) : c.status === f); });
+  $("claims").innerHTML = L.length ? L.map(claimHtml).join("") : '<div class="panel" style="margin-top:16px">No claims in this view.</div>';
+}
+
+function claimHtml(c){
+  var col = "var(--" + c.status + ")";
+  var h = '<div class="claim"><div class="claim-head"><span>' + c.id + (c.marker ? " · cited as " + esc(c.marker) : " · no citation") + '</span><span class="pill" style="background:' + col + '">' + LABEL[c.status] + '</span></div>';
+  h += '<blockquote>“' + esc(c.claim) + '”</blockquote>';
+  if (c.refLabel) h += '<div class="cite">Matched reference: ' + esc(c.refLabel) + '</div>';
+  h += '<div class="facts"><div class="fact"><h4>Confidence</h4><div class="conf"><div class="track"><i style="width:' + Math.round(c.confidence * 100) + '%;background:' + col + '"></i></div><b>' + Math.round(c.confidence * 100) + '%</b> <span>(' + clabel(c.confidence) + ')</span></div></div>';
+  h += '<div class="fact"><h4>Why</h4>' + esc(c.explanation || "No explanation given.") + '</div></div>';
+  c.evidence.forEach(function(e){
+    h += '<div class="evidence' + (e.relevance === "refutes" ? " refutes" : "") + '">“' + esc(e.text) + '”<span class="src">Evidence (' + esc(e.relevance) + ') · page ' + esc(e.page) + (e.pid ? " · " + esc(e.pid) : "") + '</span>';
+    if (e.context) h += '<details><summary>Show surrounding text</summary><div class="cite">' + esc(e.context) + '</div></details>';
+    h += '</div>';
+  });
+  if (c.flags.length || needsReview(c)) {
+    h += '<div class="flags">' + c.flags.map(function(x){ return '<span class="flag">' + esc(FLAGTXT[x] || x.replace(/_/g, " ")) + '</span>'; }).join("");
+    if (c.flags.indexOf("needs_human_review") < 0 && needsReview(c)) h += '<span class="flag">needs human review</span>';
+    h += '</div>';
+  }
+  var hist = reviewsOf(c);
+  h += '<div class="review"><input type="text" id="n-' + c.id + '" placeholder="Reviewer note (optional)" aria-label="Reviewer note">'
+     + ["Agree", "Disagree", "Follow up"].map(function(o){ return '<button class="btn-alt btn-small" data-rv="' + o + '" data-c="' + c.id + '">' + o + '</button>'; }).join("");
+  if (hist.length) h += '<span class="done">Last: ' + esc(hist[hist.length - 1].decision) + '</span>';
+  h += '</div>';
+  if (hist.length) h += '<div class="hist">Review history<br>' + hist.map(function(r){ return esc(r.ts.slice(0, 16).replace("T", " ")) + " UTC · " + esc(r.decision) + (r.note ? " · " + esc(r.note) : ""); }).join("<br>") + '</div>';
+  return h + '</div>';
+}
+
+function renderStore(){
+  var D = S.data;
+  var ev = D.claims.reduce(function(n, c){ return n + c.evidence.length; }, 0);
+  var fl = D.claims.reduce(function(n, c){ return n + c.flags.length; }, 0);
+  var rv = D.claims.reduce(function(n, c){ return n + reviewsOf(c).length; }, 0);
+  var rows = [
+    ["Claims", "Each statement found in the paper, with its verdict", D.claims.length],
+    ["References", "The reference list found in the paper", D.refs.length],
+    ["Evidence quotes", "Quotes copied from source passages", ev],
+    ["Flags", "Warnings such as low confidence or possible miscitation", fl],
+    ["Review decisions", "Agree, Disagree and Follow up with notes and time", rv]
+  ];
+  $("storetable").innerHTML = rows.map(function(r){ return "<tr><td><b>" + r[0] + "</b></td><td>" + r[1] + "</td><td>" + r[2] + "</td></tr>"; }).join("");
+  $("json").textContent = JSON.stringify({report: D, reviews: S.reviews}, null, 2);
+}
+
+/* ========== CLICKS: filters and review buttons ========== */
+$("chips").addEventListener("click", function(e){
+  var b = e.target.closest("[data-f]");
+  if (b) { S.filter = b.getAttribute("data-f"); render(); }
+});
+$("claims").addEventListener("click", function(e){
+  var b = e.target.closest("[data-rv]");
+  if (!b) return;
+  var id = b.getAttribute("data-c");
+  var c = S.data.claims.filter(function(x){ return x.id === id; })[0];
+  if (!c) return;
+  var note = ($("n-" + id) || {}).value || "";
+  S.reviews.push({ts: new Date().toISOString(), claim: c.claim, claim_id: id, decision: b.getAttribute("data-rv"), note: note});
+  saveReviews();
+  if (S.reportId) {
+    fetch(API + "/api/reviews", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({report_id: S.reportId, claim_id: id, claim: c.claim, decision: b.getAttribute("data-rv"), note: note})
+    }).catch(function(){});
+  }
+  claimsView();
+  renderStore();
+});
+
+/* ========== DOWNLOADS ========== */
+function download(name, text, type){
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type: type}));
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+function toMd(){
+  var D = S.data, sc = scoreOf(D);
+  var m = "# CiteCheck report: " + D.file + "\n\n> Automated result, not a final academic judgment.\n\nReliability score: " + (sc == null ? "n/a" : sc + "/100") + "\n\n";
+  D.claims.forEach(function(c){
+    m += "## " + c.id + ": " + LABEL[c.status] + " (confidence " + Math.round(c.confidence * 100) + "%)\n\n**Claim:** " + c.claim + "\n\n**Cited as:** " + (c.marker || "none") + "\n\n**Why:** " + c.explanation + "\n\n";
+    c.evidence.forEach(function(e){ m += '- Evidence: "' + e.text + '" (page ' + e.page + ")\n"; });
+    if (c.flags.length) m += "\nFlags: " + c.flags.join(", ") + "\n";
+    reviewsOf(c).forEach(function(r){ m += "\nReview (" + r.ts + "): " + r.decision + " " + r.note; });
+    m += "\n\n";
+  });
+  return m;
+}
+$("dlm").onclick = function(){ download("citecheck_report.md", toMd(), "text/markdown"); };
+$("dlj").onclick = function(){ download("citecheck_report.json", JSON.stringify({report: S.data, reviews: S.reviews}, null, 2), "application/json"); };
+</script>
+</body>
+</html>
